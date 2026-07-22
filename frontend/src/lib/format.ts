@@ -1,48 +1,71 @@
-// Presentation helpers: score bands, colors, labels, number formatting.
+// Presentation helpers — thresholds and colors mirror the Evernine design system.
 
-export type Band = "strong" | "moderate" | "mixed" | "weak"
-
-export function scoreBand(score: number): Band {
-  if (score >= 70) return "strong"
-  if (score >= 55) return "moderate"
-  if (score >= 40) return "mixed"
-  return "weak"
-}
-
-// Returns an HSL color string for a score, interpolating red -> amber -> green.
+// Discrete, theme-aware health color (matches the design: >=70 good, >=50 warn, else bad).
 export function scoreColor(score: number): string {
-  // hue 0 (red) at 15, ~45 (amber) at 50, ~150 (green) at 85+
-  const clamped = Math.max(0, Math.min(100, score))
-  const hue = Math.round((clamped / 100) * 145) // 0..145
-  return `hsl(${hue} 68% 45%)`
+  if (score >= 70) return "hsl(var(--success))"
+  if (score >= 50) return "hsl(var(--warning))"
+  return "hsl(var(--destructive))"
 }
 
-export const bandLabel: Record<Band, string> = {
-  strong: "Strong",
-  moderate: "Moderate",
-  mixed: "Mixed",
-  weak: "At risk",
+export function scoreBg(score: number): string {
+  if (score >= 70) return "hsl(var(--success) / 0.12)"
+  if (score >= 50) return "hsl(var(--warning) / 0.13)"
+  return "hsl(var(--destructive) / 0.12)"
 }
 
-export function confidenceLabel(band: string): string {
-  return band.charAt(0).toUpperCase() + band.slice(1)
+// Grade label: >=80 Strong, >=65 Healthy, >=50 Fair, else At risk.
+export function grade(score: number): string {
+  if (score >= 80) return "Strong"
+  if (score >= 65) return "Healthy"
+  if (score >= 50) return "Fair"
+  return "At risk"
+}
+
+export type ConfTier = "High" | "Medium" | "Low"
+
+// Backend confidence is 0..1; the UI shows it 0..100 with a tier + color.
+export function confMeta(confidence01: number): { pct: number; tier: ConfTier; color: string; bg: string } {
+  const pct = Math.round(confidence01 * 100)
+  if (pct >= 60)
+    return pct >= 80
+      ? { pct, tier: "High", color: "hsl(var(--success))", bg: "hsl(var(--success) / 0.12)" }
+      : { pct, tier: "Medium", color: "hsl(var(--warning))", bg: "hsl(var(--warning) / 0.13)" }
+  return { pct, tier: "Low", color: "hsl(var(--destructive))", bg: "hsl(var(--destructive) / 0.12)" }
+}
+
+// Map the backend's confidence_band string to a display tier/color as a fallback.
+export function bandMeta(band: string): { tier: ConfTier; color: string; bg: string } {
+  if (band === "high") return { tier: "High", color: "hsl(var(--success))", bg: "hsl(var(--success) / 0.12)" }
+  if (band === "medium") return { tier: "Medium", color: "hsl(var(--warning))", bg: "hsl(var(--warning) / 0.13)" }
+  return { tier: "Low", color: "hsl(var(--destructive))", bg: "hsl(var(--destructive) / 0.12)" }
 }
 
 export const SIGNAL_LABELS: Record<string, string> = {
   revenue: "Revenue",
   reviews: "Reviews",
-  loyalty_ops: "Loyalty & Ops",
-  ad_efficiency: "Ad Efficiency",
+  loyalty_ops: "Loyalty & support",
+  ad_efficiency: "Ad efficiency",
 }
 
-export const SIGNAL_ORDER = ["revenue", "loyalty_ops", "reviews", "ad_efficiency"]
+export const SIGNAL_DESC: Record<string, string> = {
+  revenue: "Momentum & trend",
+  reviews: "Rating & sentiment",
+  loyalty_ops: "Repeat rate & support",
+  ad_efficiency: "ROAS trend",
+}
+
+export const SIGNAL_ORDER = ["revenue", "reviews", "loyalty_ops", "ad_efficiency"]
 
 export function signalLabel(key: string): string {
   return SIGNAL_LABELS[key] ?? key.replace(/_/g, " ")
 }
 
+export function signalShort(key: string): string {
+  return { revenue: "Revenue", reviews: "Reviews", loyalty_ops: "Loyalty", ad_efficiency: "Ad eff." }[key] ?? key
+}
+
 export const FLAG_LABELS: Record<string, string> = {
-  recent_revenue_shock: "Recent revenue shock",
+  recent_revenue_shock: "Recent shock",
   low_confidence: "Low confidence",
   mostly_single_signal: "Sparse data",
   single_signal_only: "Single signal",
@@ -64,7 +87,6 @@ export function fmtPct(n: number, digits = 0): string {
 }
 
 export function fmtMonth(ym: string): string {
-  // "2026-06" -> "Jun '26"
   const [y, m] = ym.split("-")
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   const mi = parseInt(m, 10) - 1

@@ -1,64 +1,93 @@
-import { scoreBand, scoreColor, bandLabel } from "@/lib/format"
+import { scoreColor } from "@/lib/format"
 
-interface ScoreGaugeProps {
+// Full-circle health ring with the score in Geist Mono at the centre.
+// Used on business cards and the Analyze result.
+export function ScoreRing({
+  score,
+  size = 74,
+  stroke = 7,
+}: {
   score: number
   size?: number
-  strokeWidth?: number
-  label?: string
-  showBand?: boolean
+  stroke?: number
+}) {
+  const r = (size - stroke) / 2
+  const cx = size / 2
+  const c = 2 * Math.PI * r
+  const off = c * (1 - Math.max(0, Math.min(100, score)) / 100)
+  const color = scoreColor(score)
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+      <circle cx={cx} cy={cx} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+      <circle
+        cx={cx}
+        cy={cx}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeDasharray={c}
+        strokeDashoffset={off}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${cx} ${cx})`}
+        style={{ transition: "stroke-dashoffset .7s cubic-bezier(.22,1,.36,1)" }}
+      />
+      <text
+        x={cx}
+        y={cx + 1}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={size * 0.32}
+        fontWeight={700}
+        fill="hsl(var(--foreground))"
+        fontFamily="'Geist Mono', monospace"
+      >
+        {Math.round(score)}
+      </text>
+    </svg>
+  )
 }
 
-// A circular progress ring with the score in the centre.
-export function ScoreGauge({
-  score,
-  size = 180,
-  strokeWidth = 14,
-  label = "Health score",
-  showBand = true,
-}: ScoreGaugeProps) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const pct = Math.max(0, Math.min(100, score)) / 100
-  const dash = circumference * pct
-  const color = scoreColor(score)
-  const band = scoreBand(score)
+function polar(cx: number, cy: number, r: number, deg: number): [number, number] {
+  const a = (deg * Math.PI) / 180
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)]
+}
+function arcPath(cx: number, cy: number, r: number, a0: number, a1: number): string {
+  const [x0, y0] = polar(cx, cy, r, a0)
+  const [x1, y1] = polar(cx, cy, r, a1)
+  const large = a1 - a0 > 180 ? 1 : 0
+  return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`
+}
 
+// 270° arc gauge for the business-detail "Overall health".
+export function GaugeArc({ score }: { score: number }) {
+  const S = 256, cx = 128, cy = 132, r = 98, sw = 17
+  const start = 135, span = 270
+  const val = start + span * (Math.max(0, Math.min(100, score)) / 100)
+  const color = scoreColor(score)
+  const [lx, ly] = polar(cx, cy, r + 2, 135)
+  const [rx, ry] = polar(cx, cy, r + 2, 45)
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="hsl(var(--muted))"
-          strokeWidth={strokeWidth}
-        />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
+    <svg width={S} height={S - 26} viewBox={`0 0 ${S} ${S - 14}`} style={{ display: "block" }}>
+      <path d={arcPath(cx, cy, r, start, start + span)} fill="none" stroke="hsl(var(--muted))" strokeWidth={sw} strokeLinecap="round" />
+      {score > 0 && (
+        <path
+          d={arcPath(cx, cy, r, start, val)}
           fill="none"
           stroke={color}
-          strokeWidth={strokeWidth}
+          strokeWidth={sw}
           strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference}`}
-          style={{ transition: "stroke-dasharray 0.8s ease-out" }}
+          style={{ transition: "all .7s cubic-bezier(.22,1,.36,1)" }}
         />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-4xl font-semibold tabular-nums tracking-tight" style={{ color }}>
-          {score.toFixed(0)}
-        </span>
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        {showBand && (
-          <span className="mt-1 text-xs font-semibold" style={{ color }}>
-            {bandLabel[band]}
-          </span>
-        )}
-      </div>
-    </div>
+      )}
+      <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="central" fontSize={58} fontWeight={700} fill="hsl(var(--foreground))" fontFamily="'Geist Mono', monospace" letterSpacing="-2">
+        {Math.round(score)}
+      </text>
+      <text x={cx} y={cy + 30} textAnchor="middle" fontSize={13} fill="hsl(var(--subtle))" fontFamily="'Geist Mono', monospace">
+        / 100
+      </text>
+      <text x={lx - 4} y={ly + 6} textAnchor="middle" fontSize={11} fill="hsl(var(--subtle))" fontFamily="'Geist Mono', monospace">0</text>
+      <text x={rx + 6} y={ry + 6} textAnchor="middle" fontSize={11} fill="hsl(var(--subtle))" fontFamily="'Geist Mono', monospace">100</text>
+    </svg>
   )
 }

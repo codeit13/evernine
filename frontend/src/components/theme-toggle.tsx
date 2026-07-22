@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { Moon, Sun } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 function getInitial(): boolean {
   if (typeof window === "undefined") return false
@@ -13,19 +12,17 @@ export function ThemeToggle() {
   const [dark, setDark] = useState(getInitial)
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle("dark", dark)
+    document.documentElement.classList.toggle("dark", dark)
     localStorage.setItem("evernine-theme", dark ? "dark" : "light")
   }, [dark])
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
       onClick={() => setDark((d) => !d)}
       aria-label="Toggle theme"
+      className="flex size-9 items-center justify-center rounded-[9px] border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
     >
-      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-    </Button>
+      {dark ? <Sun className="size-[17px]" /> : <Moon className="size-[17px]" />}
+    </button>
   )
 }

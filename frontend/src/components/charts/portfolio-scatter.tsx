@@ -22,7 +22,8 @@ export function PortfolioScatter({ reports, height = 320 }: { reports: ScoreRepo
   const data = reports.map((r) => ({
     x: r.overall_confidence,
     y: r.composite_score,
-    z: r.coverage,
+    z: (r.signals.revenue?.drivers?.last_revenue as number | undefined) ?? 1,
+    cov: r.coverage,
     name: r.business_name,
     id: r.business_id,
     color: scoreColor(r.composite_score),
@@ -51,7 +52,7 @@ export function PortfolioScatter({ reports, height = 320 }: { reports: ScoreRepo
           axisLine={false}
           label={{ value: "Health →", angle: -90, position: "insideLeft", fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
         />
-        <ZAxis type="number" dataKey="z" range={[80, 380]} name="Coverage" />
+        <ZAxis type="number" dataKey="z" range={[110, 620]} name="Revenue" />
         <ReferenceLine y={55} stroke="hsl(var(--border))" strokeDasharray="4 4" />
         <ReferenceLine x={0.5} stroke="hsl(var(--border))" strokeDasharray="4 4" />
         <Tooltip
@@ -65,7 +66,7 @@ export function PortfolioScatter({ reports, height = 320 }: { reports: ScoreRepo
                 <div className="mt-1 text-muted-foreground">
                   Health <span className="font-medium text-foreground">{p.y.toFixed(0)}</span> ·
                   Confidence <span className="font-medium text-foreground">{Math.round(p.x * 100)}%</span> ·
-                  Coverage <span className="font-medium text-foreground">{Math.round(p.z * 100)}%</span>
+                  Coverage <span className="font-medium text-foreground">{Math.round((p.cov ?? 0) * 100)}%</span>
                 </div>
               </div>
             )
@@ -77,7 +78,7 @@ export function PortfolioScatter({ reports, height = 320 }: { reports: ScoreRepo
           className="cursor-pointer"
         >
           {data.map((d, i) => (
-            <Cell key={i} fill={d.color} fillOpacity={0.8} stroke={d.color} />
+            <Cell key={i} fill={d.color} fillOpacity={0.18} stroke={d.color} strokeWidth={1.8} />
           ))}
         </Scatter>
       </ScatterChart>

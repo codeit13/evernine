@@ -1,53 +1,21 @@
 import type { ScoreReport } from "@/lib/api"
-import { Badge } from "@/components/ui/badge"
-import { Sparkles, ShieldCheck, FileText } from "lucide-react"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { GroundedBadge } from "@/components/badges"
+import { Sparkles } from "lucide-react"
 
-// The AI-generated (or template) explanation, with a verifiable "grounded" badge
-// backed by the backend's groundedness guard.
+// AI explanation card (used on the Analyze results). Matches the design.
 export function ExplanationPanel({ report }: { report: ScoreReport }) {
-  const isLlm = report.explanation_source === "llm"
-  const grounded = report.explanation_grounded
-  const checked = report.groundedness?.checked_numbers ?? 0
-
   return (
-    <div className="rounded-xl border bg-gradient-to-b from-accent/40 to-transparent p-4">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm font-medium">
+    <div className="rounded-2xl border bg-card p-[22px] shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
           <Sparkles className="size-4 text-primary" />
-          {isLlm ? "AI explanation" : "Explanation"}
+          <h3 className="text-sm font-semibold">AI explanation</h3>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Badge variant={isLlm ? "default" : "muted"}>
-            {isLlm ? <Sparkles className="size-3" /> : <FileText className="size-3" />}
-            {isLlm ? "Live model" : "Deterministic"}
-          </Badge>
-          {grounded && (
-            <TooltipProvider delayDuration={150}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Badge variant="success">
-                      <ShieldCheck className="size-3" />
-                      Grounded
-                    </Badge>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Every number in this explanation was automatically cross-checked against the
-                  computed sub-scores{checked ? ` (${checked} values verified)` : ""}.
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-        </div>
+        {report.explanation_grounded && <GroundedBadge label="Grounded" />}
       </div>
-      <p className="text-sm leading-relaxed text-foreground/90">{report.explanation}</p>
+      <p className="text-sm leading-relaxed text-foreground" style={{ textWrap: "pretty" as any }}>
+        {report.explanation}
+      </p>
     </div>
   )
 }

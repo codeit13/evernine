@@ -7,13 +7,13 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import type { ScoreReport } from "@/lib/api"
-import { SIGNAL_ORDER, signalLabel } from "@/lib/format"
+import { SIGNAL_ORDER, signalShort } from "@/lib/format"
 
 export function HealthRadar({ report, height = 260 }: { report: ScoreReport; height?: number }) {
   const data = SIGNAL_ORDER.map((key) => {
     const s = report.signals[key]
     return {
-      signal: signalLabel(key),
+      signal: signalShort(key),
       value: s?.present ? (s.shrunk_subscore ?? 0) : 0,
       present: s?.present ?? false,
     }

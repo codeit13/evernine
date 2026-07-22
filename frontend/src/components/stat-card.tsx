@@ -1,35 +1,38 @@
 import type { ReactNode } from "react"
-import { Card } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
 
+// KPI card matching the design: uppercase label + icon, big Geist Mono value
+// (optionally colored), unit, and a sub caption.
 export function StatCard({
   label,
   value,
+  unit,
   sub,
   icon,
-  accent,
+  color,
 }: {
   label: string
   value: ReactNode
+  unit?: string
   sub?: ReactNode
   icon?: ReactNode
-  accent?: string
+  color?: string
 }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
+    <div className="rounded-2xl border bg-card p-[18px] shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-subtle">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span
+          className="font-mono text-[32px] font-semibold leading-none tracking-tight"
+          style={color ? { color } : undefined}
+        >
+          {value}
         </span>
-        {icon && <span className="text-muted-foreground">{icon}</span>}
+        {unit && <span className="font-mono text-sm text-subtle">{unit}</span>}
       </div>
-      <div
-        className={cn("mt-2 text-2xl font-semibold tracking-tight tabular-nums")}
-        style={accent ? { color: accent } : undefined}
-      >
-        {value}
-      </div>
-      {sub && <div className="mt-0.5 text-xs text-muted-foreground">{sub}</div>}
-    </Card>
+      {sub && <div className="mt-2.5 text-[12.5px] text-muted-foreground">{sub}</div>}
+    </div>
   )
 }

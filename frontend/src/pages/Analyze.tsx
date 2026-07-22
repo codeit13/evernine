@@ -1,19 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { api, type BusinessInput, type BusinessSummary, type ScoreReport } from "@/lib/api"
-import { ScoreGauge } from "@/components/score-gauge"
+import { ScoreRing } from "@/components/score-gauge"
 import { ExplanationPanel } from "@/components/explanation-panel"
 import { SignalBreakdown } from "@/components/signal-breakdown"
-import { HealthRadar } from "@/components/charts/health-radar"
 import { TrendChart } from "@/components/charts/trend-chart"
 import { AspectsChart } from "@/components/charts/aspects-chart"
 import { ConfidenceBadge, FlagBadges } from "@/components/badges"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fmtMoney, fmtPct } from "@/lib/format"
 import { EXAMPLES } from "@/lib/examples"
-import { Upload, Play, RotateCcw, AlertCircle } from "lucide-react"
+import { grade, scoreColor, scoreBg, confMeta, fmtMoney } from "@/lib/format"
+import { Upload, ArrowRight, CircleAlert, Activity } from "lucide-react"
 
 function computeRoas(biz: BusinessInput): Record<string, number> {
   const out: Record<string, number> = {}
@@ -33,270 +29,167 @@ export default function Analyze() {
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    api.businesses().then(setBusinesses).catch(() => {})
-  }, [])
+  useEffect(() => { api.businesses().then(setBusinesses).catch(() => {}) }, [])
 
   const roas = useMemo(() => (submitted ? computeRoas(submitted) : {}), [submitted])
-  const aspects = (report?.signals.reviews?.drivers?.aspects ?? {}) as Record<
-    string,
-    { pos: number; neg: number }
-  >
+  const aspects = (report?.signals.reviews?.drivers?.aspects ?? {}) as Record<string, { pos: number; neg: number }>
 
   async function loadExisting(id: string) {
     if (!id) return
-    try {
-      const biz = await api.businessDetail(id)
-      setText(JSON.stringify(biz, null, 2))
-      setError(null)
-    } catch (e) {
-      setError(String(e))
-    }
+    try { setText(JSON.stringify(await api.businessDetail(id), null, 2)); setError(null) }
+    catch (e) { setError(String(e)) }
   }
-
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const f = e.target.files?.[0]; if (!f) return
     const reader = new FileReader()
-    reader.onload = () => {
-      setText(String(reader.result))
-      setError(null)
-    }
+    reader.onload = () => { setText(String(reader.result)); setError(null) }
     reader.readAsText(f)
   }
-
   async function score() {
     setError(null)
     let payload: BusinessInput
-    try {
-      payload = JSON.parse(text)
-    } catch (e) {
-      setError(`Invalid JSON: ${(e as Error).message}`)
-      return
-    }
-    if (!payload.business_name) {
-      setError("Payload needs at least a business_name and revenue_by_month.")
-      return
-    }
+    try { payload = JSON.parse(text) }
+    catch (e) { setError(`Invalid JSON: ${(e as Error).message}`); return }
+    if (!payload.business_name) { setError("Needs at least a business_name and revenue_by_month."); return }
     setLoading(true)
-    try {
-      const r = await api.scorePayload(payload, true)
-      setReport(r)
-      setSubmitted(payload)
-    } catch (e) {
-      setError(String(e))
-    } finally {
-      setLoading(false)
-    }
+    try { const r = await api.scorePayload(payload, true); setReport(r); setSubmitted(payload) }
+    catch (e) { setError(String(e)) }
+    finally { setLoading(false) }
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Analyze a business</h1>
-        <p className="text-sm text-muted-foreground">
-          Score any business — start from a sample, upload a JSON file, or edit the data directly.
+    <main className="mx-auto max-w-[1240px] animate-fade-in px-[26px] pb-[72px] pt-[34px]">
+      <div className="mb-[22px]">
+        <h1 className="text-[25px] font-semibold tracking-tight">Analyze a business</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Paste a business profile as JSON or upload a file. Evernine scores it live from the same four grounded signals — nothing is inferred beyond the numbers you provide.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_1fr]">
-        {/* Input panel */}
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Input data</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                  defaultValue=""
-                  onChange={(e) => loadExisting(e.target.value)}
-                >
-                  <option value="" disabled>
-                    Load a sample…
-                  </option>
-                  {businesses.map((b) => (
-                    <option key={b.business_id} value={b.business_id}>
-                      {b.business_name}
-                    </option>
-                  ))}
-                </select>
-                <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                  <Upload className="size-4" />
-                  Upload JSON
-                </Button>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={onFile}
-                />
-              </div>
-
-              <div className="flex flex-wrap gap-1.5">
-                {Object.entries(EXAMPLES).map(([key, val]) => (
-                  <Button
-                    key={key}
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      setText(JSON.stringify(val, null, 2))
-                      setError(null)
-                    }}
-                  >
-                    {val.business_name}
-                  </Button>
-                ))}
-              </div>
-
-              <textarea
-                spellCheck={false}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="h-[340px] w-full resize-y rounded-md border border-input bg-muted/30 p-3 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-
-              {error && (
-                <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2.5 text-xs text-destructive">
-                  <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button onClick={score} disabled={loading} className="flex-1">
-                  <Play className="size-4" />
-                  {loading ? "Scoring…" : "Score business"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setText(JSON.stringify(EXAMPLES.healthy, null, 2))
-                    setReport(null)
-                    setSubmitted(null)
-                    setError(null)
-                  }}
-                  aria-label="Reset"
-                >
-                  <RotateCcw className="size-4" />
-                </Button>
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                Schema: <code>business_name</code>, <code>revenue_by_month</code> {"{YYYY-MM: n}"},
-                optional <code>customer_reviews</code>, <code>repeat_purchase_rate</code>,{" "}
-                <code>customer_support_tickets</code>, <code>ad_spend_by_month</code>. Missing
-                signals are handled gracefully.
-              </p>
-            </CardContent>
-          </Card>
+      <div className="grid items-start gap-[18px] lg:grid-cols-2">
+        {/* Editor */}
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <div className="flex items-center justify-between border-b px-[18px] py-3.5">
+            <div className="flex items-center gap-2 text-[13.5px] font-semibold">
+              <span className="size-2.5 rounded-sm bg-primary" /> business.json
+            </div>
+            <div className="flex gap-2">
+              <select
+                defaultValue=""
+                onChange={(e) => loadExisting(e.target.value)}
+                className="rounded-md border bg-secondary px-2.5 py-1.5 text-xs font-medium text-muted-foreground"
+              >
+                <option value="" disabled>Load sample…</option>
+                {businesses.map((b) => <option key={b.business_id} value={b.business_id}>{b.business_name}</option>)}
+              </select>
+              <button onClick={() => fileRef.current?.click()} className="inline-flex items-center gap-1.5 rounded-md border bg-secondary px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Upload className="size-3" /> Upload
+              </button>
+              <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onFile} />
+            </div>
+          </div>
+          <textarea
+            spellCheck={false}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="min-h-[420px] w-full resize-y bg-secondary/50 p-[18px] font-mono text-[13px] leading-relaxed outline-none"
+          />
+          <div className="flex flex-wrap gap-1.5 border-t px-[18px] pt-3">
+            {Object.entries(EXAMPLES).map(([key, val]) => (
+              <button key={key} onClick={() => { setText(JSON.stringify(val, null, 2)); setError(null) }}
+                className="rounded-md border bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                {val.business_name}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-3 px-[18px] py-3.5">
+            <div className="text-[11.5px] leading-relaxed text-subtle">
+              Expects <code className="font-mono text-muted-foreground">revenue_by_month</code> · reviews · repeat rate · support · ad spend
+            </div>
+            <button onClick={score} disabled={loading}
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-[9px] bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-[hsl(var(--accent-foreground))] disabled:opacity-60">
+              <ArrowRight className="size-4" /> {loading ? "Scoring…" : "Score business"}
+            </button>
+          </div>
         </div>
 
-        {/* Results panel */}
+        {/* Results */}
         <div>
           {loading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-64 w-full" />
+            <div className="space-y-4"><Skeleton className="h-40 rounded-2xl" /><Skeleton className="h-56 rounded-2xl" /></div>
+          ) : error ? (
+            <div className="rounded-2xl border border-destructive bg-destructive/5 p-5">
+              <div className="flex items-center gap-2 text-sm font-semibold text-destructive"><CircleAlert className="size-4" /> Could not parse input</div>
+              <p className="mt-2.5 font-mono text-[13px] leading-relaxed text-muted-foreground">{error}</p>
             </div>
           ) : report && submitted ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold">{report.business_name}</h2>
-                {report.category && <Badge variant="secondary">{report.category}</Badge>}
-                <ConfidenceBadge band={report.confidence_band} />
-                <Badge variant="muted">Coverage {fmtPct(report.coverage)}</Badge>
-                <FlagBadges flags={report.flags} />
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="flex flex-col items-center justify-center py-5">
-                  <ScoreGauge score={report.composite_score} size={170} />
-                </Card>
-                <div className="md:col-span-2 space-y-4">
-                  <ExplanationPanel report={report} />
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Signal shape</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <HealthRadar report={report} height={220} />
-                    </CardContent>
-                  </Card>
+            <div className="animate-fade-in space-y-4">
+              <div className="rounded-2xl border bg-card p-[22px] shadow-sm">
+                <div className="flex items-center gap-[18px]">
+                  <ScoreRing score={report.composite_score} size={116} stroke={10} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="text-lg font-semibold tracking-tight">{report.business_name}</div>
+                      {report.category && <span className="rounded-md border bg-secondary px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-subtle">{report.category}</span>}
+                    </div>
+                    <div className="mt-1.5 inline-flex items-center rounded-lg px-3 py-1 text-[13px] font-semibold" style={{ color: scoreColor(report.composite_score), background: scoreBg(report.composite_score) }}>
+                      {grade(report.composite_score)}
+                    </div>
+                    <div className="mt-3.5 flex gap-5">
+                      <Metric label="Confidence" value={<span style={{ color: confMeta(report.overall_confidence).color }}>{confMeta(report.overall_confidence).pct} · {confMeta(report.overall_confidence).tier}</span>} />
+                      <Metric label="Coverage" value={`${Math.round(report.coverage * 100)}%`} />
+                    </div>
+                  </div>
                 </div>
+                {report.flags.length > 0 && <div className="mt-4"><FlagBadges flags={report.flags} score={report.composite_score} /></div>}
               </div>
 
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Signal breakdown</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <SignalBreakdown report={report} />
-                </CardContent>
-              </Card>
+              <div className="rounded-2xl border bg-card p-[22px] shadow-sm">
+                <h3 className="mb-4 text-sm font-semibold">Signal scores</h3>
+                <SignalBreakdown report={report} />
+              </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                {Object.keys(submitted.revenue_by_month || {}).length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-base">Revenue</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <TrendChart
-                        series={submitted.revenue_by_month}
-                        valueFormatter={(v) => fmtMoney(v)}
-                        highlightLast={report.flags.includes("recent_revenue_shock")}
-                        yLabel="Revenue"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-                {Object.keys(roas).length > 0 && (
-                  <Card>
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-base">ROAS</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <TrendChart
-                        series={roas}
-                        color="hsl(158 64% 42%)"
-                        valueFormatter={(v) => `${v.toFixed(1)}x`}
-                        yLabel="ROAS"
-                      />
-                    </CardContent>
-                  </Card>
-                )}
-                {Object.keys(aspects).length > 0 && (
-                  <Card className="lg:col-span-2">
-                    <CardHeader className="pb-1">
-                      <CardTitle className="text-base">Review themes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+              <ExplanationPanel report={report} />
+
+              {(Object.keys(submitted.revenue_by_month || {}).length > 0 || Object.keys(aspects).length > 0) && (
+                <div className="grid gap-4">
+                  {Object.keys(submitted.revenue_by_month || {}).length > 1 && (
+                    <div className="rounded-2xl border bg-card p-[22px] shadow-sm">
+                      <h3 className="mb-2 text-sm font-semibold">Revenue trend</h3>
+                      <TrendChart series={submitted.revenue_by_month} valueFormatter={fmtMoney} highlightLast={report.flags.includes("recent_revenue_shock")} yLabel="Revenue" height={180} />
+                    </div>
+                  )}
+                  {Object.keys(aspects).length > 0 && (
+                    <div className="rounded-2xl border bg-card p-[22px] shadow-sm">
+                      <h3 className="mb-2 text-sm font-semibold">Review themes</h3>
                       <AspectsChart aspects={aspects} />
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <Card className="flex h-full min-h-[420px] items-center justify-center border-dashed">
-              <div className="max-w-sm px-6 text-center">
-                <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-accent text-primary">
-                  <Play className="size-5" />
-                </div>
-                <h3 className="font-medium">Score a business to see results</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Load a sample, upload a JSON file, or edit the data on the left, then hit “Score
-                  business”. You’ll get a composite health score, per-signal breakdown, a grounded
-                  explanation, and charts.
-                </p>
+            <div className="rounded-2xl border border-dashed bg-secondary/40 px-7 py-14 text-center">
+              <div className="mx-auto flex size-[52px] items-center justify-center rounded-[13px] bg-accent text-primary">
+                <Activity className="size-6" />
               </div>
-            </Card>
+              <h3 className="mt-4 text-[15px] font-semibold">No results yet</h3>
+              <p className="mx-auto mt-2 max-w-[300px] text-[13px] leading-relaxed text-muted-foreground">
+                Edit the profile on the left and hit <b className="text-foreground">Score business</b>. Scores, confidence and a grounded explanation appear here.
+              </p>
+            </div>
           )}
         </div>
       </div>
+    </main>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[11px] font-medium uppercase tracking-wide text-subtle">{label}</div>
+      <div className="mt-0.5 font-mono text-base font-semibold">{value}</div>
     </div>
   )
 }
