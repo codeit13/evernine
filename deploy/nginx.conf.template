@@ -1,0 +1,39 @@
+# nginx site for Evernine. Replace __DOMAIN__ with your host, then let certbot
+# add the TLS block:  sudo certbot --nginx -d __DOMAIN__
+#
+# Serves the built SPA and reverse-proxies /api → the FastAPI backend on :8010.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    root /home/ubuntu/evernine/frontend/dist;
+    index index.html;
+
+    # Let the ACME HTTP-01 challenge through even behind a proxy.
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    # API → FastAPI (trailing slash strips the /api prefix).
+    location /api/ {
+        proxy_pass http://127.0.0.1:8010/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    # SPA fallback: serve index.html for client-side routes.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache hashed static assets aggressively.
+    location /assets/ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+}

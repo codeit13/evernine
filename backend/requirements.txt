@@ -1,0 +1,7 @@
+# Core service (offline scoring + API + LLM explanation).
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.6
+numpy>=1.24
+openai>=1.14
+python-dotenv>=1.0

@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 32% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 32% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 32% 12%;
+
+    --primary: 245 58% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 15% 96%;
+    --secondary-foreground: 224 32% 18%;
+
+    --muted: 240 15% 96%;
+    --muted-foreground: 224 12% 46%;
+
+    --accent: 245 60% 96%;
+    --accent-foreground: 245 58% 40%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 64% 40%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 240 15% 91%;
+    --input: 240 15% 91%;
+    --ring: 245 58% 51%;
+
+    --radius: 0.6rem;
+  }
+
+  .dark {
+    --background: 224 34% 8%;
+    --foreground: 220 20% 92%;
+
+    --card: 224 30% 11%;
+    --card-foreground: 220 20% 92%;
+
+    --popover: 224 30% 11%;
+    --popover-foreground: 220 20% 92%;
+
+    --primary: 245 70% 66%;
+    --primary-foreground: 224 34% 8%;
+
+    --secondary: 224 22% 17%;
+    --secondary-foreground: 220 20% 92%;
+
+    --muted: 224 22% 16%;
+    --muted-foreground: 220 12% 62%;
+
+    --accent: 224 24% 20%;
+    --accent-foreground: 245 70% 82%;
+
+    --destructive: 0 63% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 158 58% 46%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 35 92% 55%;
+    --warning-foreground: 224 34% 8%;
+
+    --border: 224 20% 20%;
+    --input: 224 20% 22%;
+    --ring: 245 70% 66%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  /* Subtle app-wide background wash */
+  .app-bg {
+    background-image: radial-gradient(
+      60% 45% at 50% 0%,
+      hsl(var(--primary) / 0.06),
+      transparent 70%
+    );
+  }
+}
+
+/* Recharts theme integration */
+.recharts-surface:focus,
+.recharts-wrapper:focus {
+  outline: none;
+}
+.recharts-cartesian-axis-tick-value {
+  fill: hsl(var(--muted-foreground));
+  font-size: 11px;
+}
+.recharts-cartesian-grid line {
+  stroke: hsl(var(--border));
+}

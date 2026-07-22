@@ -1,0 +1,18 @@
+# systemd unit for the Evernine FastAPI backend.
+# Install: sudo cp deploy/evernine-api.service /etc/systemd/system/
+#          sudo systemctl daemon-reload && sudo systemctl enable --now evernine-api
+[Unit]
+Description=Evernine Health Intelligence API
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/evernine/backend
+EnvironmentFile=-/home/ubuntu/evernine/backend/.env
+ExecStart=/home/ubuntu/evernine/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8010
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
